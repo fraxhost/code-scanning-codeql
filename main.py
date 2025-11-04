@@ -11,3 +11,5 @@ def ping():
 
 # FIX: avoid shell, pass a list; validate/whitelist target
 # subprocess.check_output(["ping", "-c", "l"])
+
+# adding useless code for committing again and test code-ql workflow
