@@ -78,8 +78,11 @@ def secure_request_example(url: str, ca_bundle: str = None) -> requests.Response
     return resp
 
 # 9) Logging sensitive data
-def sensitive_logging_example(username: str, password: str) -> None:
-    logging.warning("User login attempt: user=%s password=%s", username, password)
+def secure_logging_example(username: str, password: str) -> None:
+    # Log only non-sensitive info, e.g., username or masked data
+    logging.warning("User login attempt: user=%s", username)
+    # Do NOT log the password
+
 
 # 10) Exposing stack trace / information disclosure
 def expose_stack_trace_example() -> None:
