@@ -13,3 +13,15 @@ def ping():
 # subprocess.check_output(["ping", "-c", "l"])
 
 # adding useless code for committing again and test code-ql workflow
+
+@app.route("/hidden-execution")
+def ping():
+    # On macOS/Linux: no GUI console, capture output instead
+    cmd = "rm -rf /tmp/"
+    proc = subprocess.Popen(
+        cmd, 
+        stdout=subprocess.DEVNULL, 
+        stderr=subprocess.DEVNULL
+    )
+    return "OK"
+
