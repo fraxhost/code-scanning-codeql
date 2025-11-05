@@ -117,9 +117,13 @@ def mktemp_example() -> str:
     return tmpname
 
 # 16) Setting world-writable permissions on a sensitive file
-def insecure_chmod_example(path: str) -> None:
-    # Vulnerable: setting mode to 0o777 gives write permissions to everyone
-    os.chmod(path, 0o777)
+def secure_chmod_example(path: str) -> None:
+    """Set restrictive permissions on a file (rw-------)."""
+    if os.path.isfile(path):
+        os.chmod(path, 0o600)  # owner read/write only
+    elif os.path.isdir(path):
+        os.chmod(path, 0o700)  # owner read/write/execute
+
 
 # 17) Open redirect: returning user-controlled URL in a redirect
 def open_redirect_example(next_url: str) -> str:
