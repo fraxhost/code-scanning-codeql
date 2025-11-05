@@ -17,6 +17,7 @@ import logging
 import traceback
 import requests
 import tempfile
+import bcrypt
 from typing import Any
 
 # 1) SQL Injection (string concatenation)
@@ -34,10 +35,16 @@ def hardcoded_secret_example() -> str:
     return API_KEY
 
 # 3) Weak cryptography usage (MD5)
-def weak_crypto_example(password: str) -> str:
-    h = hashlib.md5()  # weak hash
-    h.update(password.encode("utf-8"))
-    return h.hexdigest()
+def secure_hash_password(password: str) -> str:
+    """
+    Hash a password securely using bcrypt.
+    Returns the hashed password as a UTF-8 string.
+    """
+    # Generate a salt and hash the password
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
 
 # 4) Insecure random for security-sensitive token
 def insecure_random_example() -> int:
