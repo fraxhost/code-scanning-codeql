@@ -99,12 +99,22 @@ def xxe_example(xml_text: str) -> None:
 
 # 15) Use of tempfile.mktemp (predictable temp filename)
 def mktemp_example() -> str:
-    # Vulnerable: mktemp is insecure (race conditions / predictable name)
-    name = tempfile.mktemp(prefix="tmpvuln_")
-    # Danger: attacker could create file at that path before you open it
-    with open(name, "w") as f:
-        f.write("data")
-    return name
+    """Create a secure temporary file, write data, and return its path.
+    Caller is responsible for removing the file when finished.
+    """
+    # Create a NamedTemporaryFile that we can close but keep on disk (delete=False)
+    with tempfile.NamedTemporaryFile(prefix="tmpvuln_", delete=False) as tf:
+        tf.write(b"data")
+        tmpname = tf.name
+
+    # Optional: tighten permissions to be user-only (rw-------)
+    try:
+        os.chmod(tmpname, 0o600)
+    except OSError:
+        # best-effort: some platforms may not allow chmod; ignore if it fails
+        pass
+
+    return tmpname
 
 # 16) Setting world-writable permissions on a sensitive file
 def insecure_chmod_example(path: str) -> None:
