@@ -60,8 +60,14 @@ def insecure_deserialization_example(serialized: bytes) -> Any:
     return obj
 
 # 8) Disabling SSL certificate verification
-def disable_ssl_verification_example(url: str) -> requests.Response:
-    resp = requests.get(url, verify=False)  # disabled TLS verification
+def secure_request_example(url: str, ca_bundle: str = None) -> requests.Response:
+    """
+    Perform HTTPS request with certificate validation enabled.
+    Optionally, provide a custom CA bundle.
+    """
+    # verify=True ensures TLS certificate is checked
+    # If you have a custom CA (internal server), pass the path via ca_bundle
+    resp = requests.get(url, verify=ca_bundle if ca_bundle else True)
     return resp
 
 # 9) Logging sensitive data
