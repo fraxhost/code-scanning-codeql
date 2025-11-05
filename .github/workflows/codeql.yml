@@ -4,11 +4,15 @@ on:
   push:
     branches: [ main ]
   pull_request:
-
+    branches: [ main ]
+  schedule:
+    # Run weekly scan every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
 
 permissions:
   contents: read
-  security-events: write   # needed to upload results to Code scanning
+  security-events: write
+  actions: read  # needed for private repos
 
 jobs:
   analyze:
@@ -18,7 +22,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # language: [ 'javascript', 'python', 'ccpp', 'csharp', 'go', 'java-kotlin', 'ruby', 'swift']
         language: ['python']
         
     steps:
@@ -29,9 +32,41 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # queries: security-extended,security-and-quality # optional suites
+          
+          # Enable extended security queries and quality checks
+          queries: security-extended,security-and-quality
+          
+          # Optional: Add custom query packs for advanced detection
+          packs: |
+            codeql/python-queries:AlertSuppression.ql
+            codeql/python-queries:Security
+          
+          # Enable all built-in query suites
+          config: |
+            name: "Advanced Security Scan"
+            
+            queries:
+              - uses: security-extended
+              - uses: security-and-quality
+            
+            # Customize paths if needed
+            paths-ignore:
+              - '**/test/**'
+              - '**/tests/**'
+              - '**/node_modules/**'
+              - '**/venv/**'
+            
+            # Enable additional experimental queries
+            query-filters:
+              - include:
+                  kind:
+                    - problem
+                    - path-problem
+                  tags contain:
+                    - security
+                    - external/cwe
 
-      # For compiled languages, try Autobuild first (ignored for script languages)
+      # For compiled languages, try Autobuild first (ignored for Python)
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
@@ -39,3 +74,9 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+          
+          # Upload all results, even low severity
+          upload: always
+          
+          # Don't fail on error (optional - remove if you want strict enforcement)
+          # fail-on: never
