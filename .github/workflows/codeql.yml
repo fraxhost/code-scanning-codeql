@@ -37,9 +37,9 @@ jobs:
           queries: security-extended,security-and-quality
           
           # Optional: Add custom query packs for advanced detection
-          packs: |
-            codeql/python-queries:AlertSuppression.ql
-            codeql/python-queries:Security
+          # packs: |
+          #   codeql/python-queries:AlertSuppression.ql
+          #   codeql/python-queries:Security
           
           # Enable all built-in query suites
           config: |
