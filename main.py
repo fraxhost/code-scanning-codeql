@@ -75,6 +75,64 @@ def expose_stack_trace_example() -> None:
     except Exception:
         print("Error occurred:", traceback.format_exc())
 
+# 11) eval() on user input
+def eval_example(user_expr: str) -> Any:
+    # Vulnerable: executes arbitrary Python code from untrusted input
+    return eval(user_expr)
+
+# 12) exec() on constructed string (code injection)
+def exec_example(user_var: str) -> None:
+    code = f"print('Hello ' + '{user_var}')"
+    # Vulnerable: executing constructed code
+    exec(code)
+
+# 13) Unsafe YAML loading (yaml.load) which can construct arbitrary objects
+def yaml_load_example(yaml_text: str) -> Any:
+    # Vulnerable: yaml.load can instantiate arbitrary objects if unsafe loader used
+    return yaml.load(yaml_text, Loader=yaml.FullLoader)  # insecure pattern historically
+
+# 14) XML External Entity (XXE) example using DOM parse of untrusted XML
+def xxe_example(xml_text: str) -> None:
+    # Vulnerable: parsing untrusted XML with entity expansion can lead to XXE
+    doc = xml.dom.minidom.parseString(xml_text)
+    # If xml_text contains an external entity reference, it may be resolved by some parsers
+
+# 15) Use of tempfile.mktemp (predictable temp filename)
+def mktemp_example() -> str:
+    # Vulnerable: mktemp is insecure (race conditions / predictable name)
+    name = tempfile.mktemp(prefix="tmpvuln_")
+    # Danger: attacker could create file at that path before you open it
+    with open(name, "w") as f:
+        f.write("data")
+    return name
+
+# 16) Setting world-writable permissions on a sensitive file
+def insecure_chmod_example(path: str) -> None:
+    # Vulnerable: setting mode to 0o777 gives write permissions to everyone
+    os.chmod(path, 0o777)
+
+# 17) Open redirect: returning user-controlled URL in a redirect
+def open_redirect_example(next_url: str) -> str:
+    # Vulnerable: sending users to unvalidated external URL
+    # In a web framework this would be: redirect(next_url)
+    return f"Redirect to: {next_url}"
+
+# 18) Plain HTTP request (sensitive data over unencrypted channel)
+def insecure_http_example(url: str) -> requests.Response:
+    # Vulnerable: sending sensitive data over http is insecure (MITM)
+    # Here we use requests for the demonstration
+    return requests.get(url)  # no verify param: plain HTTP or insecure transport
+
+# 19) os.system with user input (command injection)
+def os_system_example(user_cmd: str) -> int:
+    # Vulnerable: passing user input to os.system executes shell commands
+    return os.system(user_cmd)
+
+# 20) Dangerous recursive delete using unvalidated user path (risky use of shutil.rmtree)
+def rmtree_example(user_path: str) -> None:
+    # Vulnerable: deleting user-supplied path could delete arbitrary files
+    shutil.rmtree(user_path)
+
 
 def main() -> None:
     """
@@ -172,6 +230,94 @@ def main() -> None:
         expose_stack_trace_example()
     except Exception as e:
         print("expose_stack_trace error:", e)
+
+    # 11) eval - call with a safe literal expression
+    try:
+        print("eval result:", eval_example("1 + 2"))
+    except Exception as e:
+        print("eval_example error:", e)
+
+    # 12) exec - benign string
+    try:
+        exec_example("world")
+    except Exception as e:
+        print("exec_example error:", e)
+
+    # 13) yaml.load - provide harmless yaml string
+    try:
+        safe_yaml = "a: 1\nb: 2"
+        print("yaml load:", yaml_load_example(safe_yaml))
+    except Exception as e:
+        print("yaml_load_example error:", e)
+
+    # 14) XXE - pass a harmless XML string (do NOT include external entities)
+    try:
+        safe_xml = "<root><child>ok</child></root>"
+        xxe_example(safe_xml)
+        print("xxe_example parsed safe xml")
+    except Exception as e:
+        print("xxe_example error:", e)
+
+    # 15) mktemp - create and remove temporary file safely
+    try:
+        tmpname = mktemp_example()
+        print("mktemp created:", tmpname)
+        # Clean up
+        if os.path.exists(tmpname):
+            os.remove(tmpname)
+    except Exception as e:
+        print("mktemp_example error:", e)
+
+    # 16) insecure chmod - create a temp file then chmod (will be cleaned up)
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            p = tf.name
+            tf.write(b"test")
+        insecure_chmod_example(p)
+        print("insecure_chmod set on:", p)
+        os.remove(p)
+    except Exception as e:
+        print("insecure_chmod_example error:", e)
+
+    # 17) open redirect - show returned URL
+    try:
+        print(open_redirect_example("https://evil.example.com"))
+    except Exception as e:
+        print("open_redirect_example error:", e)
+
+    # 18) insecure http - monkeypatch requests.get to avoid network call
+    try:
+        real_get = requests.get
+        class FakeResp:
+            status_code = 200
+            text = "ok"
+        requests.get = lambda url: FakeResp()
+        r = insecure_http_example("http://example.com")
+        print("insecure_http_example fake status:", r.status_code)
+        requests.get = real_get
+    except Exception as e:
+        print("insecure_http_example error:", e)
+        try:
+            requests.get = real_get
+        except Exception:
+            pass
+
+    # 19) os.system - run a harmless command string
+    try:
+        os_system_example("echo safe_cmd")
+    except Exception as e:
+        print("os_system_example error:", e)
+
+    # 20) rmtree - create temporary directory and safely remove it (but function demonstrates the dangerous pattern)
+    try:
+        tmpdir = tempfile.mkdtemp()
+        # create a file to ensure directory exists
+        open(os.path.join(tmpdir, "x"), "w").close()
+        # Call with safe path (but function itself is dangerous if used with untrusted input)
+        rmtree_example(tmpdir)
+        print("rmtree_example removed:", tmpdir)
+    except Exception as e:
+        print("rmtree_example error:", e)
 
     print("Finished calling vulnerable examples. Inspect source and run CodeQL.")
 
